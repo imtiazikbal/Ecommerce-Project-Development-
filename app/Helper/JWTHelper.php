@@ -10,14 +10,14 @@ use Firebase\JWT\Key;
 class JWTHelper
 {
 
-    public static function CreateToken($userEmail){
+    public static function CreateToken($userEmail,$userID){
         $key = '123-abc-ABC';
         $payload = [
             'iss' => 'laravel-demo',
             'iat' => time(),
             'exp' => time() + 60*60,
             'userEmail' => $userEmail,
-           
+            'userID' => $userID
         ];
         return JWT::encode($payload,$key,'HS256');
         

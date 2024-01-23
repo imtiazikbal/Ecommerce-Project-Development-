@@ -22,6 +22,7 @@ class UserTokenVarification
             return redirect('/login');
         }else{
             $request->headers->set('userEmail',$result->userEmail);
+            $request->headers->set('userID',$result->userID);
            return $next($request);
 
         }
