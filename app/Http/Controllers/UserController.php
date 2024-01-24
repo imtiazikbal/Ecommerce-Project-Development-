@@ -4,57 +4,62 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Models\User;
+use App\Mail\OTPMail;
 use App\Helper\JWTHelper;
 use Illuminate\Http\Request;
+use App\Helper\ResponseHelper;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
-    public function userRegistration(Request $request)
+    public function UserLogin(Request $request)
     {
 
         try {
-
-            User::create($request->input());
-            return response()->json(['status' => 'success', 'message' => 'User created successfully'], 200);
-
-        } catch (Exception $exception) {
-
-            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 500);
-
+            $userEmail = $request->UserEmail;
+            $OTP = rand(100000, 999999);
+            $details = [
+                'code' => $OTP,
+            ];
+            Mail::to($userEmail)->send(new OTPMail($details));
+            User::updateOrCreate(['email' => $userEmail], ['email' => $userEmail, 'otp' => $OTP]);
+            return ResponseHelper::Out('success', "A 6 Digit OTP has been send to your email address", 200);
+        } catch (Exception $e) {
+            return ResponseHelper::Out('error', $e->getMessage(), 500);
         }
     }
-    public function userLogin(Request $request)
+
+    public function VarifyUser(Request $request)
     {
         try {
-
-            $user = User::where($request->input())->select('id')->first();
-            $userID = $user->id;
-            if ($userID > 0) {
-
-                $token = JWTHelper::CreateToken($request->input('email'), $userID);
-
-                return response()->json(['status' => 'success', 'message' => 'User logged in successfully'], 200)
-                    ->cookie('token', $token, 60 * 60);
+            $userEmail = $request->UserEmail;
+            $otp = $request->VarificationCode;
+            $varificationUser = User::where('email', $userEmail)->where('otp', $otp)->first();
+            if ($varificationUser) {
+                if ($varificationUser->otp === "0") {
+                    return ResponseHelper::Out('error', "User Varification Failed", 500);
+                } else {
+                    User::where('email', $userEmail)->where('otp', $otp)->update(['otp' => 0]);
+                    $token  = JWTHelper::CreateToken($userEmail,$varificationUser->id);
+                    return ResponseHelper::Out('success', "User Varification Successfull", 200)->cookie('token', $token, 60*24*60);
+                }
 
             } else {
-                return response()->json(['status' => 'failed', 'message' => 'No User Found'], 200);
-
+                return ResponseHelper::Out('error', "User Varification Failed", 500);
             }
 
-        } catch (Exception $exception) {
-
-            return response()->json(['status' => 'error', 'message' => $exception->getMessage()], 500);
-
+        } catch (Exception $e) {
+            return ResponseHelper::Out('error', $e->getMessage(), 500);
         }
     }
-    public function userProfile(Request $request){
-       $userID = $request->header('userID');
-       return User::where('id',$userID)->first();
 
+    function UserLogut(Request $request){
+        try{
+            return redirect('/UserLoginPage')->cookie('token', '', -1);
+            
+        }catch(Exception $e){
+            return ResponseHelper::Out('error', $e->getMessage(), 500);
+            
+        }
     }
-   function  userLogout(){
-     
-     return redirect('/login')->cookie('token','',time()-60*60);
-    
-   }
 }

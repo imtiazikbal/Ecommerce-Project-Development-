@@ -9,7 +9,7 @@ class ProductReview extends Model
 {
     use HasFactory;
     protected $guarded = [];
-    public function customer(){
+    public function profile(){
         return $this->belongsTo(CustomerProfile::class,'customer_id');
     }
 }
