@@ -9,6 +9,7 @@ use App\Models\ProductReview;
 use App\Models\ProductSlider;
 use App\Helper\ResponseHelper;
 use App\Models\ProductDetails;
+use App\Models\CustomerProfile;
 
 class ProductController extends Controller
 {
@@ -73,12 +74,19 @@ class ProductController extends Controller
     public function CreateProductReview(Request $request)
     {
         try {
-            $userID = $request->header('userID');
-            $data = ProductReview::updateOrCreate(
-                ['user_id' => $userID],
-                $request->input()
-            );
-            return ResponseHelper::Out('success', $data, 200);
+           $userID = $request->header('userID');
+            $profile = CustomerProfile::where('user_id', $userID)->first();
+          
+            if($profile){
+                $request->merge(['customer_id' => $profile->id]);
+                $data = ProductReview::updateOrCreate(
+                    ['customer_id' => $profile->id, 'product_id' => $request->product_id],
+                    $request->input()
+                );
+                return ResponseHelper::Out('success', $data, 200);
+            }else{
+                return ResponseHelper::Out('error', 'User Not Found', 500);
+            }
         } catch (Exception $e) {
             return ResponseHelper::Out('error', 'Something went wrong', 500);
         }
